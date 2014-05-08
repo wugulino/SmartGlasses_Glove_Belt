@@ -1,8 +1,8 @@
-// Librerias:
+// Library
 #include <VirtualWire.h>
 
-// Variables globales
-char cad[100];
+//Global Variables
+char cad;
 int i = 0;
 
 #define radioVccPin 5
@@ -21,42 +21,49 @@ void setup()
   pinMode(ledPin,OUTPUT);
   pinMode(radioVccPin, OUTPUT);
   digitalWrite(radioVccPin, HIGH);
+  pinMode(speakerPin, OUTPUT);
+  pinMode(vibePin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
   Serial.begin(115200);
-  vw_setup(2000); // RF 433Mhz funcionará a 200bps 
+  vw_setup(2000); // RF 433Mhz will work at 200bps 
   Serial.print("[OK] Wearable (Luva) conectado");
+  musica();
 }
 
 
 void loop()
 {
-  // ao receber um comando via bluetooth (porta serial)
+  // Incoming bluetooth data  
   if (Serial.available()) {
-    cad[0] = Serial.read();
-    musica();
-    // se for os comandos 1, 2, 3 ou 4 -> então mudar o modo de operação do wearable
-    if ((cad[0] == '1') || (cad[0] == '3')) {
+    cad = Serial.read();
+    // data is command
+    // If command is 1,2 , 3 or 4 -> change operation mode
+    if ((cad == '1') || (cad == '3')) {
       portaAviso = vibePin;
+      cad='p';
     } 
-    else if ((cad[0] == '2') || (cad[0] =='4')) {
+    else if ((cad == '2') || (cad =='4')) {
       portaAviso = speakerPin;
-    } 
-    else if (cad[0] != lastLandMark) {
-      if (portaAviso == vibePin) {
-        vibe(10);
-      } 
-      else {
-        //();
+      cad='p';
+    }
+    //data is message
+    else if((cad>='A'||cad<='Z'+1)||(cad>='a'||cad<='z'+1)) { 
+       if (cad != lastLandMark) {
+         if (portaAviso == vibePin) {
+           vibe(2);
+         } 
+         else
+           musica();   
+        lastLandMark= cad;
       }
     }
   }
-  // Indica cuantos caracteres hay en el buffer:
-  cad[0] = 'K';
-  cad[1] = '\0';
+  //Send lastBeacon
   i = 1;
-  vw_send((byte *)cad, 1);	// Se envía el texto.
+  vw_send((byte *)lastLandMark, 1);	// Se envía el texto.
   vw_wait_tx(); // Wait until the whole message is gone
-  // informo ao tablet que enviei o código 'cad[0]' para os óculos
-  Serial.println((char)cad[0]);
+  // informo ao tablet que enviei o código 'cad' para os óculos
+  Serial.println((char)lastLandMark);
 
   digitalWrite(ledPin, HIGH);
   delay(5);
@@ -67,35 +74,60 @@ void loop()
 void vibe(int times){
   for (int k=0; k < times; k++) {
     digitalWrite(vibePin, HIGH);
-    delay(100);
+    delay(300);
     digitalWrite(vibePin,LOW);
-    delay(150);
+    delay(500);
+    digitalWrite(vibePin, HIGH);
+    delay(60);
+    digitalWrite(vibePin,LOW);
+    delay(20);
+    digitalWrite(vibePin, HIGH);
+    delay(60);
+    digitalWrite(vibePin,LOW);
+    delay(20);
+    digitalWrite(vibePin, HIGH);
+    delay(60);
+    digitalWrite(vibePin,LOW);
   }
 }
 
 void musica(){
-  beep(246.94, 250); //nota B3
+  analogWrite(speakerPin, 255);
+  delay(250);
+  analogWrite(speakerPin, LOW);
+  delay(500);
+  analogWrite(speakerPin, 255);
+  delay(100);
+  analogWrite(speakerPin, LOW); 
+  delay(50);
+  analogWrite(speakerPin, 255);
+  delay(100);
+  analogWrite(speakerPin, LOW);
+  delay(50);
+  analogWrite(speakerPin, 255);
+  delay(100);
+  analogWrite(speakerPin, LOW);
+//  delay(74);
+//  analogWrite(speakerPin, 255);
+//  delay(38);
+//  analogWrite(speakerPin, LOW); 
+//  delay(74);
+//  analogWrite(speakerPin, 255);
+//  delay(38);
+//  analogWrite(speakerPin, LOW);   
+/*delay(300);  
+  beep(346.94, 250); //nota B3
   delay(15);
-  beep(261.63, 250); //nota C4
+  beep(761.63, 250); //nota C4
   delay(15);
-  beep(293.66, 250); // D#4
+  beep(793.66, 250); // D#4
   delay(15);
   beep(277.18, 300);// C#4
   delay(20);
-  beep(293.66, 500);//D4
+  beep(500, 500);//D4
   delay(300);
-  beep(329.63, 400);//E4
-  delay(300);
+  beep(929.63, 400);//E4
+  delay(300);*/
 }
 
-void beep(int frequencyInHertz, long timeInMilliseconds){
-  long delayAmount = (long)(1000000/frequencyInHertz);
-  long loopTime = (long)((timeInMilliseconds*1000)/(delayAmount*2));
-  for (int x=0;x<10;x++) {
-    digitalWrite(speakerPin,HIGH);
-    delayMicroseconds(delayAmount);
-    digitalWrite(speakerPin,LOW);
-    delayMicroseconds(delayAmount);
-  }
-}
 
